@@ -23,6 +23,7 @@ st.sidebar.header("Upload Image/Video or Provide a URL")
 option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image", "URL Video"))
 
 confidence_threshold = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.25)
+frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)  # New slider for frame interval
 
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -48,16 +49,21 @@ elif option == "Upload Video":
         video_cap = cv2.VideoCapture(tfile.name)
         
         stframe = st.empty()
+        frame_count = 0
         while video_cap.isOpened():
             ret, frame = video_cap.read()
             if not ret:
                 break
-            
-            results = model.predict(source=frame, conf=confidence_threshold)
-            for result in results:
-                frame_with_boxes = result.plot()
-            
-            stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
+
+            frame_count += 1
+            if frame_count % frame_interval == 0:  # Process every nth frame
+                # Downscale frame for faster processing
+                frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
+                results = model.predict(source=frame, conf=confidence_threshold)
+                for result in results:
+                    frame_with_boxes = result.plot()
+
+                stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
         
         video_cap.release()
 
@@ -84,15 +90,20 @@ elif option == "URL Video":
         video_cap = cv2.VideoCapture(video_url)
         
         stframe = st.empty()
+        frame_count = 0
         while video_cap.isOpened():
             ret, frame = video_cap.read()
             if not ret:
                 break
             
-            results = model.predict(source=frame, conf=confidence_threshold)
-            for result in results:
-                frame_with_boxes = result.plot()
-            
-            stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
+            frame_count += 1
+            if frame_count % frame_interval == 0:  # Process every nth frame
+                # Downscale frame for faster processing
+                frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
+                results = model.predict(source=frame, conf=confidence_threshold)
+                for result in results:
+                    frame_with_boxes = result.plot()
+
+                stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
         
         video_cap.release()
