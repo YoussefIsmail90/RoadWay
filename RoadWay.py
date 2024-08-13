@@ -1,13 +1,16 @@
 import streamlit as st
 from ultralytics import YOLO
+import cv2
 import numpy as np
 from PIL import Image
-import cv2
-import tempfile
-import os
 
 # Load the YOLOv8 model
-model = YOLO('yolov8_road_damage.pt')
+try:
+    model = YOLO('yolov8_road_damage.pt')
+    st.success("Model loaded successfully!")
+except Exception as e:
+    st.error(f"Failed to load the YOLOv8 model: {e}")
+    st.stop()
 
 # Streamlit app title
 st.title("Road Damage Detection with YOLOv8")
@@ -79,14 +82,16 @@ if uploaded_file is not None:
 
 # Real-time Webcam Detection
 st.sidebar.subheader("Real-Time Detection")
+webcam_index = st.sidebar.number_input("Webcam Index", value=0, min_value=0, step=1)
+
 if st.sidebar.button("Start Webcam"):
     st.subheader("Webcam Live Feed")
 
     # Access the webcam
-    webcam = cv2.VideoCapture(0)
+    webcam = cv2.VideoCapture(webcam_index)
 
     if not webcam.isOpened():
-        st.error("Could not open webcam.")
+        st.error("Could not open webcam. Please check the webcam index and permissions.")
     else:
         stframe = st.empty()
         while True:
@@ -103,3 +108,4 @@ if st.sidebar.button("Start Webcam"):
             stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
 
     webcam.release()
+
