@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import requests
 from io import BytesIO
+import tempfile
 
 # Load the YOLOv8 model
 try:
@@ -22,8 +23,13 @@ st.sidebar.header("Upload Image/Video or Provide a URL")
 # Options for the user to select
 option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image", "URL Video"))
 
-confidence_threshold = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.25)
-frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)  # New slider for frame interval
+# Set the default confidence threshold value to 0.01
+confidence_threshold = st.sidebar.slider(
+    "Detection Confidence Threshold",
+    0.0,  # Minimum value
+    1.0,  # Maximum value
+    0.01  # Default value
+)
 
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -49,21 +55,18 @@ elif option == "Upload Video":
         video_cap = cv2.VideoCapture(tfile.name)
         
         stframe = st.empty()
-        frame_count = 0
         while video_cap.isOpened():
             ret, frame = video_cap.read()
             if not ret:
                 break
 
-            frame_count += 1
-            if frame_count % frame_interval == 0:  # Process every nth frame
-                # Downscale frame for faster processing
-                frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
-                results = model.predict(source=frame, conf=confidence_threshold)
-                for result in results:
-                    frame_with_boxes = result.plot()
+            # Downscale frame for faster processing
+            frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
+            results = model.predict(source=frame, conf=confidence_threshold)
+            for result in results:
+                frame_with_boxes = result.plot()
 
-                stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
+            stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
         
         video_cap.release()
 
@@ -86,6 +89,7 @@ elif option == "URL Image":
 elif option == "URL Video":
     video_url = st.sidebar.text_input("Enter Video URL")
     if video_url:
+        frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)  # Show frame interval only for URL Video
         st.subheader("Processing Video from URL...")
         video_cap = cv2.VideoCapture(video_url)
         
