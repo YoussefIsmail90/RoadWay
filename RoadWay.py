@@ -8,7 +8,7 @@ import tempfile
 import cv2
 from ultralytics import YOLO
 from dotenv import load_dotenv
-
+import os
 # Load the YOLOv8 model
 try:
     model = YOLO('yolov8_road_damage.pt')
