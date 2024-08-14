@@ -30,7 +30,7 @@ def get_ip_location():
         return 30.0444, 31.2357  # Default to Cairo, Egypt
     
     try:
-        response = requests.get(f'https://ipinfo.io/json?token={api_key}')
+        response = requests.get(f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}')
         response.raise_for_status()  # Check if the request was successful
         data = response.json()
         loc = data.get('loc', '30.0444,31.2357').split(',')
