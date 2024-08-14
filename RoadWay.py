@@ -74,24 +74,39 @@ def display_map(lat, lon):
 # Real-time video processing from webcam
 def real_time_video_processing():
     st.subheader("Real-Time Video Processing")
-    video_cap = cv2.VideoCapture(0)  # 0 is usually the default camera
+    
+    # Attempt to access the webcam
+    camera_index = 0  # Try different indices if necessary
+    video_cap = cv2.VideoCapture(camera_index)
+    
+    # Check if the webcam was successfully opened
+    if not video_cap.isOpened():
+        st.error("Unable to access the webcam. Please check your camera settings.")
+        return
     
     stframe = st.empty()
+    
     while True:
         ret, frame = video_cap.read()
+        
+        # Check if frame was successfully grabbed
         if not ret:
-            st.error("Failed to grab frame from webcam.")
-            break
+            st.error("Failed to grab frame from webcam. Please check your camera.")
+            video_cap.release()
+            return
         
         frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
         results = model.predict(source=frame, conf=confidence_threshold)
+        
         for result in results:
             frame_with_boxes = result.plot()
-
+        
         stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
         
+        # Button to stop real-time processing
         if st.button("Stop Real-Time Processing"):
             video_cap.release()
+            st.success("Real-time processing stopped.")
             break
 
 if option == "Upload Image":
