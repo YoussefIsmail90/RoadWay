@@ -9,6 +9,11 @@ import cv2
 from ultralytics import YOLO
 from dotenv import load_dotenv
 import os
+from io import BytesIO
+
+# Load environment variables from .env file
+load_dotenv()
+
 # Load the YOLOv8 model
 try:
     model = YOLO('yolov8_road_damage.pt')
@@ -17,25 +22,20 @@ except Exception as e:
     st.error(f"Failed to load the YOLOv8 model: {e}")
     st.stop()
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Function to get location based on IP
+# Function to get location based on IP using ipinfo.io
 def get_ip_location():
-    api_key = os.getenv('IPAPI_ACCESS_KEY')
-    api_key = os.getenv('IPAPI_API_KEY')
-    st.write(f"API Key: {api_key}")  # Debugging purposes only
-
+    api_key = os.getenv('e9ad6580e95e2f')
     if not api_key:
-        st.error("API key for IPAPI is missing.")
+        st.error("API key for ipinfo.io is missing.")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
     
     try:
-        response = requests.get(f'http://api.ipapi.com/api/check?access_key={api_key}')
+        response = requests.get(f'https://ipinfo.io/json?token={api_key}')
         response.raise_for_status()  # Check if the request was successful
         data = response.json()
-        lat = data.get('latitude', 30.0444)  # Default to Cairo, Egypt if not found
-        lon = data.get('longitude', 31.2357)  # Default to Cairo, Egypt if not found
+        loc = data.get('loc', '30.0444,31.2357').split(',')
+        lat = float(loc[0])
+        lon = float(loc[1])
         return lat, lon
     except requests.RequestException as e:
         st.error(f"Failed to get location: {e}")
@@ -91,10 +91,6 @@ confidence_threshold = st.sidebar.slider(
     1.0,  # Maximum value
     0.5  # Default value
 )
-
-# Get location based on IP address
-api_key = 'your_ipapi_access_key'  # Replace with your IPAPI access key
-latitude, longitude = get_ip_location(api_key)
 
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -166,5 +162,3 @@ elif option == "URL Video":
 
         # Display the map with the detected location
         display_map(latitude, longitude)
-
-
