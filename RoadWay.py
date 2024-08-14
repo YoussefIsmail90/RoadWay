@@ -24,21 +24,18 @@ except Exception as e:
 load_dotenv()
 
 # Function to get location based on IP
-def get_ip_location():
-    api_key = os.getenv('IPAPI_API_KEY')  # Get the API key from environment variables
-    if not api_key:
-        st.error("API key not found. Please set the IPAPI_API_KEY environment variable.")
-        return 30.0444, 31.2357  # Default to Cairo, Egypt if API key is not set
-
+def get_ip_location(api_key):
     try:
         response = requests.get(f'http://api.ipapi.com/api/check?access_key={api_key}')
+        response.raise_for_status()  # Check if the request was successful
         data = response.json()
         lat = data.get('latitude', 30.0444)  # Default to Cairo, Egypt if not found
         lon = data.get('longitude', 31.2357)  # Default to Cairo, Egypt if not found
         return lat, lon
-    except Exception as e:
+    except requests.RequestException as e:
         st.error(f"Failed to get location: {e}")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
+
 
 
 # Function to display the map with Folium
