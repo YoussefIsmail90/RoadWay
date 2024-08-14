@@ -51,7 +51,7 @@ def process_video(video_path):
     
     video_cap.release()
 
-# JavaScript to get location
+# JavaScript to get location and send to Streamlit
 js_code = """
 <script>
 function getLocation() {
@@ -60,8 +60,8 @@ function getLocation() {
             function(position) {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
-                // Send location to Streamlit
-                window.parent.postMessage({ lat: lat, lon: lon }, "*");
+                // Send location to Streamlit using URL query params
+                window.location.href = window.location.href.split('?')[0] + "?lat=" + lat + "&lon=" + lon;
             },
             function(error) {
                 console.error("Error getting location: " + error.message);
@@ -185,3 +185,4 @@ elif option == "URL Video":
         # Display the map with the detected location
         if latitude and longitude:
             display_map(latitude, longitude)
+
