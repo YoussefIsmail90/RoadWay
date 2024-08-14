@@ -17,16 +17,18 @@ except Exception as e:
     st.error(f"Failed to load the YOLOv8 model: {e}")
     st.stop()
 
-# Function to get location based on IP
-
-
 # Load environment variables from .env file
 load_dotenv()
 
 # Function to get location based on IP
-def get_ip_location(api_key):
+def get_ip_location():
+    api_key = os.getenv('IPAPI_ACCESS_KEY')
+    if not api_key:
+        st.error("API key for IPAPI is missing.")
+        return 30.0444, 31.2357  # Default to Cairo, Egypt
+    
     try:
-        response = requests.get(f'http://api.ipapi.com/api/check?access_key={"8880903e9a1b4ecc92894373d343cbbb"}')
+        response = requests.get(f'http://api.ipapi.com/api/check?access_key={api_key}')
         response.raise_for_status()  # Check if the request was successful
         data = response.json()
         lat = data.get('latitude', 30.0444)  # Default to Cairo, Egypt if not found
