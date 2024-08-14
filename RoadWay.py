@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import os
 from io import BytesIO
 import streamlit.components.v1 as components
-import threading
+from threading import Thread
 
 # Load environment variables from .env file
 load_dotenv()
@@ -60,23 +60,18 @@ def process_video(video_path, frame_interval):
     video_cap.release()
 
 # Function to handle URL video
+def download_video(video_url):
+    response = requests.get(video_url, stream=True)
+    tfile = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    with open(tfile.name, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+    return tfile.name
+
 def handle_url_video(video_url, frame_interval):
-    video_cap = cv2.VideoCapture(video_url)
-    stframe = st.empty()
-    frame_count = 0
-    while video_cap.isOpened():
-        ret, frame = video_cap.read()
-        if not ret:
-            break
-
-        frame_count += 1
-        if frame_count % frame_interval == 0:
-            frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
-            results = model.predict(source=frame, conf=confidence_threshold)
-            frame_with_boxes = results[0].plot()
-            stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
-
-    video_cap.release()
+    video_path = download_video(video_url)
+    process_video(video_path, frame_interval)
 
 # Function to get location from JavaScript
 def get_location_js():
@@ -182,7 +177,8 @@ elif option == "URL Video":
     if video_url:
         frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)
         st.subheader("Processing Video from URL...")
-        threading.Thread(target=handle_url_video, args=(video_url, frame_interval)).start()
+        # Use threading to handle URL video processing in the background
+        Thread(target=handle_url_video, args=(video_url, frame_interval)).start()
 
         # Display the map with the detected location
         display_map(latitude, longitude)
