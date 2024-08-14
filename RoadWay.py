@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import os
 from io import BytesIO
 import streamlit.components.v1 as components
+import threading
 
 # Load environment variables from .env file
 load_dotenv()
@@ -40,20 +41,41 @@ def process_image(image_np):
     return img_with_boxes
 
 # Function to process video
-def process_video(video_path):
+def process_video(video_path, frame_interval):
     video_cap = cv2.VideoCapture(video_path)
     stframe = st.empty()
+    frame_count = 0
     while video_cap.isOpened():
         ret, frame = video_cap.read()
         if not ret:
             break
 
-        frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
-        results = model.predict(source=frame, conf=confidence_threshold)
-        frame_with_boxes = results[0].plot()
-
-        stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
+        frame_count += 1
+        if frame_count % frame_interval == 0:
+            frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
+            results = model.predict(source=frame, conf=confidence_threshold)
+            frame_with_boxes = results[0].plot()
+            stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
     
+    video_cap.release()
+
+# Function to handle URL video
+def handle_url_video(video_url, frame_interval):
+    video_cap = cv2.VideoCapture(video_url)
+    stframe = st.empty()
+    frame_count = 0
+    while video_cap.isOpened():
+        ret, frame = video_cap.read()
+        if not ret:
+            break
+
+        frame_count += 1
+        if frame_count % frame_interval == 0:
+            frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
+            results = model.predict(source=frame, conf=confidence_threshold)
+            frame_with_boxes = results[0].plot()
+            stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
+
     video_cap.release()
 
 # Function to get location from JavaScript
@@ -133,7 +155,7 @@ elif option == "Upload Video":
         st.subheader("Processing Video...")
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_file.read())
-        process_video(tfile.name)
+        process_video(tfile.name, frame_interval=5)  # Adjust frame interval as needed
         
         # Display the map with the detected location
         display_map(latitude, longitude)
@@ -160,24 +182,7 @@ elif option == "URL Video":
     if video_url:
         frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)
         st.subheader("Processing Video from URL...")
-        video_cap = cv2.VideoCapture(video_url)
-        
-        stframe = st.empty()
-        frame_count = 0
-        while video_cap.isOpened():
-            ret, frame = video_cap.read()
-            if not ret:
-                break
-            
-            frame_count += 1
-            if frame_count % frame_interval == 0:
-                frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
-                results = model.predict(source=frame, conf=confidence_threshold)
-                frame_with_boxes = results[0].plot()
-
-                stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
-        
-        video_cap.release()
+        threading.Thread(target=handle_url_video, args=(video_url, frame_interval)).start()
 
         # Display the map with the detected location
         display_map(latitude, longitude)
