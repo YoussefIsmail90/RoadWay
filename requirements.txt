@@ -7,3 +7,4 @@ opencv-python-headless
 Pillow
 folium
 streamlit-folium
+geocoder
