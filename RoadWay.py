@@ -1,13 +1,11 @@
 import streamlit as st
-import streamlit.components.v1 as components
+import requests
 import folium
 from streamlit_folium import st_folium
 from PIL import Image
 import numpy as np
 import tempfile
 import cv2
-import requests
-from io import BytesIO
 from ultralytics import YOLO
 
 # Load the YOLOv8 model
@@ -17,6 +15,19 @@ try:
 except Exception as e:
     st.error(f"Failed to load the YOLOv8 model: {e}")
     st.stop()
+
+# Function to get location based on IP
+def get_ip_location(api_key):
+    try:
+        response = requests.get(f'http://api.ipapi.com/api/check?access_key={
+8880903e9a1b4ecc92894373d343cbbb}')
+        data = response.json()
+        lat = data.get('latitude', 30.0444)  # Default to Cairo, Egypt if not found
+        lon = data.get('longitude', 31.2357)  # Default to Cairo, Egypt if not found
+        return lat, lon
+    except Exception as e:
+        st.error(f"Failed to get location: {e}")
+        return 30.0444, 31.2357  # Default to Cairo, Egypt
 
 # Function to display the map with Folium
 def display_map(lat, lon):
@@ -51,50 +62,6 @@ def process_video(video_path):
     
     video_cap.release()
 
-# JavaScript to get location and send to Streamlit
-js_code = """
-<script>
-function getLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                // Send location to Streamlit using URL query params
-                window.location.href = window.location.href.split('?')[0] + "?lat=" + lat + "&lon=" + lon;
-            },
-            function(error) {
-                console.error("Error getting location: " + error.message);
-            }
-        );
-    } else {
-        console.error("Geolocation is not supported by this browser.");
-    }
-}
-window.onload = getLocation;
-</script>
-"""
-
-# Function to display JavaScript
-def display_js():
-    components.html(js_code, height=0)
-
-# Display the JavaScript widget to get the location
-st.subheader("Getting Your Location...")
-display_js()
-
-# Function to retrieve location from query params
-def get_location_from_js():
-    location = st.experimental_get_query_params()
-    if 'lat' in location and 'lon' in location:
-        return float(location['lat'][0]), float(location['lon'][0])
-    return None, None
-
-latitude, longitude = get_location_from_js()
-
-if latitude and longitude:
-    st.write(f"Detected Location: Latitude {latitude}, Longitude {longitude}")
-
 # Streamlit app title
 st.title("Roadway Infrastructure Monitoring System")
 
@@ -111,6 +78,10 @@ confidence_threshold = st.sidebar.slider(
     0.5  # Default value
 )
 
+# Get location based on IP address
+api_key = 'your_ipapi_access_key'  # Replace with your IPAPI access key
+latitude, longitude = get_ip_location(api_key)
+
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
@@ -125,8 +96,7 @@ if option == "Upload Image":
         st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
         # Display the map with the detected location
-        if latitude and longitude:
-            display_map(latitude, longitude)
+        display_map(latitude, longitude)
 
 elif option == "Upload Video":
     uploaded_file = st.sidebar.file_uploader("Choose a video...", type=["mp4", "mov", "avi"])
@@ -137,8 +107,7 @@ elif option == "Upload Video":
         process_video(tfile.name)
         
         # Display the map with the detected location
-        if latitude and longitude:
-            display_map(latitude, longitude)
+        display_map(latitude, longitude)
 
 elif option == "URL Image":
     image_url = st.sidebar.text_input("Enter Image URL")
@@ -155,8 +124,7 @@ elif option == "URL Image":
         st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
         # Display the map with the detected location
-        if latitude and longitude:
-            display_map(latitude, longitude)
+        display_map(latitude, longitude)
 
 elif option == "URL Video":
     video_url = st.sidebar.text_input("Enter Video URL")
@@ -183,6 +151,6 @@ elif option == "URL Video":
         video_cap.release()
 
         # Display the map with the detected location
-        if latitude and longitude:
-            display_map(latitude, longitude)
+        display_map(latitude, longitude)
+
 
