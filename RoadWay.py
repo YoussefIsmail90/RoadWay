@@ -3,12 +3,11 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 from PIL import Image
+import requests
+from io import BytesIO
 import tempfile
 import folium
 from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-import time
 
 # Load the YOLOv8 model
 try:
@@ -24,7 +23,7 @@ st.title("Roadway Infrastructure Monitoring System")
 st.sidebar.header("Upload Image/Video or Provide a URL")
 
 # Options for the user to select
-option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image", "URL Video", "Real-Time"))
+option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image", "URL Video"))
 
 # Set the default confidence threshold value
 confidence_threshold = st.sidebar.slider(
@@ -41,49 +40,19 @@ longitude = st.sidebar.number_input("Longitude", value=31.2357, format="%.6f")  
 
 # Function to display map with Folium
 def display_map(lat, lon):
+    # Create a folium map centered on the provided latitude and longitude
     m = folium.Map(location=[lat, lon], zoom_start=6)
+    
+    # Add a marker to the map
     folium.Marker(
         [lat, lon], 
         popup="Reported Damage Location", 
         icon=folium.Icon(color="red")
     ).add_to(m)
+    
+    # Display the map in the Streamlit app
     st_folium(m, width=700, height=500)
 
-def real_time_video_processing():
-    st.subheader("Real-Time Video Processing")
-    
-    camera_index = 0  # Try different indices if necessary
-    video_cap = cv2.VideoCapture(camera_index)
-    
-    # Check if the webcam was successfully opened
-    if not video_cap.isOpened():
-        st.error(f"Unable to access the webcam with index {camera_index}. Please check your camera settings.")
-        return
-    
-    stframe = st.empty()
-    
-    while True:
-        ret, frame = video_cap.read()
-        
-        if not ret:
-            st.error("Failed to grab frame from webcam. Please check your camera.")
-            video_cap.release()
-            return
-        
-        frame = cv2.resize(frame, (640, 360))
-        results = model.predict(source=frame, conf=confidence_threshold)
-        
-        for result in results:
-            frame_with_boxes = result.plot()
-        
-        stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
-        
-        if st.button("Stop Real-Time Processing"):
-            video_cap.release()
-            st.success("Real-time processing stopped.")
-            break
-
-# Handle different options
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
@@ -99,6 +68,7 @@ if option == "Upload Image":
             img_with_boxes = result.plot()
             st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
+        # Display the map with the selected coordinates
         display_map(latitude, longitude)
 
 elif option == "Upload Video":
@@ -115,7 +85,7 @@ elif option == "Upload Video":
             if not ret:
                 break
 
-            frame = cv2.resize(frame, (640, 360))
+            frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
             results = model.predict(source=frame, conf=confidence_threshold)
             for result in results:
                 frame_with_boxes = result.plot()
@@ -124,6 +94,7 @@ elif option == "Upload Video":
         
         video_cap.release()
 
+        # Display the map with the selected coordinates
         display_map(latitude, longitude)
 
 elif option == "URL Image":
@@ -142,12 +113,13 @@ elif option == "URL Image":
             img_with_boxes = result.plot()
             st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
+        # Display the map with the selected coordinates
         display_map(latitude, longitude)
 
 elif option == "URL Video":
     video_url = st.sidebar.text_input("Enter Video URL")
     if video_url:
-        frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)
+        frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)  # Show frame interval only for URL Video
         st.subheader("Processing Video from URL...")
         video_cap = cv2.VideoCapture(video_url)
         
@@ -160,7 +132,7 @@ elif option == "URL Video":
             
             frame_count += 1
             if frame_count % frame_interval == 0:
-                frame = cv2.resize(frame, (640, 360))
+                frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
                 results = model.predict(source=frame, conf=confidence_threshold)
                 for result in results:
                     frame_with_boxes = result.plot()
@@ -168,11 +140,3 @@ elif option == "URL Video":
                 stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
         
         video_cap.release()
-
-        display_map(latitude, longitude)
-
-elif option == "Real-Time":
-    real_time_video_processing()
-
-else:
-    st.write("Select an option from the sidebar.")
