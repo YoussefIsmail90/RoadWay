@@ -38,7 +38,7 @@ def get_ip_location():
         st.error(f"Failed to get location: {e}")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
 
-
+latitude, longitude = get_ip_location()
 
 # Function to display the map with Folium
 def display_map(lat, lon):
