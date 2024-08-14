@@ -23,27 +23,6 @@ except Exception as e:
     st.error(f"Failed to load the YOLOv8 model: {e}")
     st.stop()
 
-# Function to get location from JavaScript
-def get_location_js():
-    location_js = """
-    <script>
-    function sendLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                const queryParams = new URLSearchParams({ lat, lon }).toString();
-                window.parent.postMessage(queryParams, "*");
-            });
-        } else {
-            alert("Geolocation is not supported by this browser.");
-        }
-    }
-    sendLocation();
-    </script>
-    """
-    components.html(location_js, height=0, width=0)
-
 # Function to display the map with Folium
 def display_map(lat, lon):
     m = folium.Map(location=[lat, lon], zoom_start=6)
@@ -77,6 +56,27 @@ def process_video(video_path):
     
     video_cap.release()
 
+# Function to get location from JavaScript
+def get_location_js():
+    location_js = """
+    <script>
+    function sendLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const queryParams = new URLSearchParams({ lat, lon }).toString();
+                window.parent.postMessage(queryParams, "*");
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+    sendLocation();
+    </script>
+    """
+    components.html(location_js, height=0, width=0)
+
 # Streamlit app title
 st.title("Roadway Infrastructure Monitoring System")
 
@@ -93,17 +93,39 @@ confidence_threshold = st.sidebar.slider(
     0.5  # Default value
 )
 
-# Get the user's location
-location_received = st.experimental_get_query_params()
-if 'lat' in location_received and 'lon' in location_received:
-    latitude = float(location_received['lat'][0])
-    longitude = float(location_received['lon'][0])
-else:
-    # Fallback to default location if no location is received
-    latitude, longitude = 30.0444, 31.2357
+# Initialize default location
+latitude, longitude = 30.0444, 31.2357  # Default to Cairo, Egypt
 
+# Display JavaScript for geolocation
 get_location_js()
 
+# Handle incoming messages from JavaScript
+def on_message(message):
+    global latitude, longitude
+    if message is not None:
+        params = message.get('data', '')
+        if params:
+            params_dict = dict(param.split('=') for param in params.split('&'))
+            latitude = float(params_dict.get('lat', latitude))
+            longitude = float(params_dict.get('lon', longitude))
+
+components.html(f"""
+    <script>
+    window.addEventListener("message", function(event) {{
+        const data = event.data;
+        if (typeof data === 'string') {{
+            const params = new URLSearchParams(data);
+            const lat = params.get('lat');
+            const lon = params.get('lon');
+            if (lat && lon) {{
+                window.parent.postMessage({{ lat: lat, lon: lon }}, "*");
+            }}
+        }}
+    }});
+    </script>
+""", height=0, width=0)
+
+# Main application logic
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
