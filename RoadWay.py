@@ -18,11 +18,33 @@ except Exception as e:
     st.error(f"Failed to load the YOLOv8 model: {e}")
     st.stop()
 
-# Function to display the JavaScript widget
+# Function to display the JavaScript widget for getting location
 def display_location_widget():
-    with open("location_widget.html", "r") as file:
-        html_code = file.read()
-    components.html(html_code, height=100)
+    # JavaScript code to get location and send it to Streamlit
+    js_code = """
+    <script>
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    // Pass the latitude and longitude to Streamlit
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    window.parent.postMessage({lat: lat, lon: lon}, "*");
+                },
+                function(error) {
+                    console.error("Error getting location: " + error.message);
+                }
+            );
+        } else {
+            console.error("Geolocation is not supported by this browser.");
+        }
+    }
+    // Automatically get location on page load
+    window.onload = getLocation;
+    </script>
+    """
+    components.html(js_code, height=0)
 
 # Function to display map with Folium
 def display_map(lat, lon):
@@ -40,15 +62,19 @@ st.title("Roadway Infrastructure Monitoring System")
 st.sidebar.header("Upload Image/Video or Provide a URL")
 
 # Display the location widget
-st.subheader("Get Your Location")
+st.subheader("Getting Your Location...")
 display_location_widget()
 
 # JavaScript to Python communication
-message = st.experimental_get_query_params()
-latitude, longitude = None, None
-if 'latitude' in message and 'longitude' in message:
-    latitude = float(message['latitude'][0])
-    longitude = float(message['longitude'][0])
+def get_location_from_js():
+    location = st.experimental_get_query_params()
+    if 'lat' in location and 'lon' in location:
+        return float(location['lat'][0]), float(location['lon'][0])
+    return None, None
+
+latitude, longitude = get_location_from_js()
+
+if latitude and longitude:
     st.write(f"Detected Location: Latitude {latitude}, Longitude {longitude}")
 
 # Options for the user to select
@@ -98,7 +124,7 @@ if option == "Upload Image":
         st.subheader("Detection Results")
         st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
-        # Display the map with the selected coordinates
+        # Display the map with the detected location
         if latitude and longitude:
             display_map(latitude, longitude)
 
@@ -110,7 +136,7 @@ elif option == "Upload Video":
         tfile.write(uploaded_file.read())
         process_video(tfile.name)
         
-        # Display the map with the selected coordinates
+        # Display the map with the detected location
         if latitude and longitude:
             display_map(latitude, longitude)
 
@@ -128,7 +154,7 @@ elif option == "URL Image":
         st.subheader("Detection Results")
         st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
-        # Display the map with the selected coordinates
+        # Display the map with the detected location
         if latitude and longitude:
             display_map(latitude, longitude)
 
@@ -156,7 +182,6 @@ elif option == "URL Video":
         
         video_cap.release()
 
-        # Display the map with the selected coordinates
+        # Display the map with the detected location
         if latitude and longitude:
             display_map(latitude, longitude)
-
