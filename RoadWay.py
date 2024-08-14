@@ -23,6 +23,9 @@ load_dotenv()
 # Function to get location based on IP
 def get_ip_location():
     api_key = os.getenv('IPAPI_ACCESS_KEY')
+    api_key = os.getenv('IPAPI_API_KEY')
+    st.write(f"API Key: {api_key}")  # Debugging purposes only
+
     if not api_key:
         st.error("API key for IPAPI is missing.")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
