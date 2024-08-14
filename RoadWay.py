@@ -100,30 +100,15 @@ latitude, longitude = 30.0444, 31.2357  # Default to Cairo, Egypt
 get_location_js()
 
 # Handle incoming messages from JavaScript
-def on_message(message):
+def handle_message():
     global latitude, longitude
-    if message is not None:
-        params = message.get('data', '')
-        if params:
-            params_dict = dict(param.split('=') for param in params.split('&'))
-            latitude = float(params_dict.get('lat', latitude))
-            longitude = float(params_dict.get('lon', longitude))
+    message = st.experimental_get_query_params().get('data', [None])[0]
+    if message:
+        params_dict = dict(param.split('=') for param in message.split('&'))
+        latitude = float(params_dict.get('lat', latitude))
+        longitude = float(params_dict.get('lon', longitude))
 
-components.html(f"""
-    <script>
-    window.addEventListener("message", function(event) {{
-        const data = event.data;
-        if (typeof data === 'string') {{
-            const params = new URLSearchParams(data);
-            const lat = params.get('lat');
-            const lon = params.get('lon');
-            if (lat && lon) {{
-                window.parent.postMessage({{ lat: lat, lon: lon }}, "*");
-            }}
-        }}
-    }});
-    </script>
-""", height=0, width=0)
+handle_message()
 
 # Main application logic
 if option == "Upload Image":
