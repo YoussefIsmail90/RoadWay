@@ -10,6 +10,7 @@ from ultralytics import YOLO
 from dotenv import load_dotenv
 import os
 from io import BytesIO
+import streamlit.components.v1 as components
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,32 +23,26 @@ except Exception as e:
     st.error(f"Failed to load the YOLOv8 model: {e}")
     st.stop()
 
-# Function to get location based on IP using ipinfo.io
-def get_location_from_address(address):
-    api_key = os.getenv('GOOGLE_MAPS_API_KEY')
-    if not api_key:
-        print("API key for Google Maps is missing.")
-        return 30.0444, 31.2357  # Default to Cairo, Egypt
-
-    try:
-        response = requests.get(f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}')
-        response.raise_for_status()
-        data = response.json()
-        if data['status'] == 'OK':
-            location = data['results'][0]['geometry']['location']
-            lat = location['lat']
-            lon = location['lng']
-            return lat, lon
-        else:
-            print("Failed to get location from address.")
-            return 30.0444, 31.2357  # Default to Cairo, Egypt
-    except requests.RequestException as e:
-        print(f"Failed to get location: {e}")
-        return 30.0444, 31.2357  # Default to Cairo, Egypt
-
-# Example usage
-address = 'Cairo, Egypt'  # Example address
-latitude, longitude = get_location_from_address(address)
+# Function to get location from JavaScript
+def get_location_js():
+    location_js = """
+    <script>
+    function sendLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const queryParams = new URLSearchParams({ lat, lon }).toString();
+                window.parent.postMessage(queryParams, "*");
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+    sendLocation();
+    </script>
+    """
+    components.html(location_js, height=0, width=0)
 
 # Function to display the map with Folium
 def display_map(lat, lon):
@@ -97,6 +92,17 @@ confidence_threshold = st.sidebar.slider(
     1.0,  # Maximum value
     0.5  # Default value
 )
+
+# Get the user's location
+location_received = st.experimental_get_query_params()
+if 'lat' in location_received and 'lon' in location_received:
+    latitude = float(location_received['lat'][0])
+    longitude = float(location_received['lon'][0])
+else:
+    # Fallback to default location if no location is received
+    latitude, longitude = 30.0444, 31.2357
+
+get_location_js()
 
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
