@@ -23,22 +23,26 @@ except Exception as e:
     st.stop()
 
 # Function to get location based on IP using ipinfo.io
-def get_ip_location():
+def get_location_from_address(address):
     api_key = os.getenv('GOOGLE_MAPS_API_KEY')
     if not api_key:
-        st.error("API key for ipinfo.io is missing.")
+        print("API key for Google Maps is missing.")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
-    
+
     try:
         response = requests.get(f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}')
-        response.raise_for_status()  # Check if the request was successful
+        response.raise_for_status()
         data = response.json()
-        loc = data.get('loc', '30.0444,31.2357').split(',')
-        lat = float(loc[0])
-        lon = float(loc[1])
-        return lat, lon
+        if data['status'] == 'OK':
+            location = data['results'][0]['geometry']['location']
+            lat = location['lat']
+            lon = location['lng']
+            return lat, lon
+        else:
+            print("Failed to get location from address.")
+            return 30.0444, 31.2357  # Default to Cairo, Egypt
     except requests.RequestException as e:
-        st.error(f"Failed to get location: {e}")
+        print(f"Failed to get location: {e}")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
 
 latitude, longitude = get_ip_location()
