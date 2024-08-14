@@ -41,29 +41,23 @@ longitude = st.sidebar.number_input("Longitude", value=31.2357, format="%.6f")  
 
 # Function to display map with Folium
 def display_map(lat, lon):
-    # Create a folium map centered on the provided latitude and longitude
     m = folium.Map(location=[lat, lon], zoom_start=6)
-    
-    # Add a marker to the map
     folium.Marker(
         [lat, lon], 
         popup="Reported Damage Location", 
         icon=folium.Icon(color="red")
     ).add_to(m)
-    
-    # Display the map in the Streamlit app
     st_folium(m, width=700, height=500)
 
 def real_time_video_processing():
     st.subheader("Real-Time Video Processing")
     
-    # Attempt to access the webcam
     camera_index = 0  # Try different indices if necessary
     video_cap = cv2.VideoCapture(camera_index)
     
     # Check if the webcam was successfully opened
     if not video_cap.isOpened():
-        st.error("Unable to access the webcam. Please check your camera settings.")
+        st.error(f"Unable to access the webcam with index {camera_index}. Please check your camera settings.")
         return
     
     stframe = st.empty()
@@ -71,13 +65,12 @@ def real_time_video_processing():
     while True:
         ret, frame = video_cap.read()
         
-        # Check if frame was successfully grabbed
         if not ret:
             st.error("Failed to grab frame from webcam. Please check your camera.")
             video_cap.release()
             return
         
-        frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
+        frame = cv2.resize(frame, (640, 360))
         results = model.predict(source=frame, conf=confidence_threshold)
         
         for result in results:
@@ -85,7 +78,6 @@ def real_time_video_processing():
         
         stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
         
-        # Button to stop real-time processing
         if st.button("Stop Real-Time Processing"):
             video_cap.release()
             st.success("Real-time processing stopped.")
@@ -107,7 +99,6 @@ if option == "Upload Image":
             img_with_boxes = result.plot()
             st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
-        # Display the map with the selected coordinates
         display_map(latitude, longitude)
 
 elif option == "Upload Video":
@@ -124,7 +115,7 @@ elif option == "Upload Video":
             if not ret:
                 break
 
-            frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
+            frame = cv2.resize(frame, (640, 360))
             results = model.predict(source=frame, conf=confidence_threshold)
             for result in results:
                 frame_with_boxes = result.plot()
@@ -133,7 +124,6 @@ elif option == "Upload Video":
         
         video_cap.release()
 
-        # Display the map with the selected coordinates
         display_map(latitude, longitude)
 
 elif option == "URL Image":
@@ -152,13 +142,12 @@ elif option == "URL Image":
             img_with_boxes = result.plot()
             st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
 
-        # Display the map with the selected coordinates
         display_map(latitude, longitude)
 
 elif option == "URL Video":
     video_url = st.sidebar.text_input("Enter Video URL")
     if video_url:
-        frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)  # Show frame interval only for URL Video
+        frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)
         st.subheader("Processing Video from URL...")
         video_cap = cv2.VideoCapture(video_url)
         
@@ -171,7 +160,7 @@ elif option == "URL Video":
             
             frame_count += 1
             if frame_count % frame_interval == 0:
-                frame = cv2.resize(frame, (640, 360))  # Resize to 640x360 for faster processing
+                frame = cv2.resize(frame, (640, 360))
                 results = model.predict(source=frame, conf=confidence_threshold)
                 for result in results:
                     frame_with_boxes = result.plot()
@@ -180,7 +169,6 @@ elif option == "URL Video":
         
         video_cap.release()
 
-        # Display the map with the selected coordinates
         display_map(latitude, longitude)
 
 elif option == "Real-Time":
