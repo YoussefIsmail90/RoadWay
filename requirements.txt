@@ -9,3 +9,4 @@ folium
 streamlit-folium
 geocoder
 streamlit-webrtc
+geopy
