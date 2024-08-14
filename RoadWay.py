@@ -18,35 +18,7 @@ except Exception as e:
     st.error(f"Failed to load the YOLOv8 model: {e}")
     st.stop()
 
-# Function to display the JavaScript widget for getting location
-def display_location_widget():
-    # JavaScript code to get location and send it to Streamlit
-    js_code = """
-    <script>
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    // Pass the latitude and longitude to Streamlit
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    window.parent.postMessage({lat: lat, lon: lon}, "*");
-                },
-                function(error) {
-                    console.error("Error getting location: " + error.message);
-                }
-            );
-        } else {
-            console.error("Geolocation is not supported by this browser.");
-        }
-    }
-    // Automatically get location on page load
-    window.onload = getLocation;
-    </script>
-    """
-    components.html(js_code, height=0)
-
-# Function to display map with Folium
+# Function to display the map with Folium
 def display_map(lat, lon):
     m = folium.Map(location=[lat, lon], zoom_start=6)
     folium.Marker(
@@ -56,46 +28,14 @@ def display_map(lat, lon):
     ).add_to(m)
     st_folium(m, width=700, height=500)
 
-# Streamlit app title
-st.title("Roadway Infrastructure Monitoring System")
-
-st.sidebar.header("Upload Image/Video or Provide a URL")
-
-# Display the location widget
-st.subheader("Getting Your Location...")
-display_location_widget()
-
-# JavaScript to Python communication
-def get_location_from_js():
-    location = st.experimental_get_query_params()
-    if 'lat' in location and 'lon' in location:
-        return float(location['lat'][0]), float(location['lon'][0])
-    return None, None
-
-latitude, longitude = get_location_from_js()
-
-if latitude and longitude:
-    st.write(f"Detected Location: Latitude {latitude}, Longitude {longitude}")
-
-# Options for the user to select
-option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image", "URL Video"))
-
-# Set the default confidence threshold value
-confidence_threshold = st.sidebar.slider(
-    "Detection Confidence Threshold",
-    0.0,  # Minimum value
-    1.0,  # Maximum value
-    0.5  # Default value
-)
-
+# Function to process image
 def process_image(image_np):
-    # Perform object detection
     results = model.predict(source=image_np, conf=confidence_threshold)
     img_with_boxes = results[0].plot()
     return img_with_boxes
 
+# Function to process video
 def process_video(video_path):
-    # Process video frame by frame
     video_cap = cv2.VideoCapture(video_path)
     stframe = st.empty()
     while video_cap.isOpened():
@@ -110,6 +50,66 @@ def process_video(video_path):
         stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
     
     video_cap.release()
+
+# JavaScript to get location
+js_code = """
+<script>
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                // Send location to Streamlit
+                window.parent.postMessage({ lat: lat, lon: lon }, "*");
+            },
+            function(error) {
+                console.error("Error getting location: " + error.message);
+            }
+        );
+    } else {
+        console.error("Geolocation is not supported by this browser.");
+    }
+}
+window.onload = getLocation;
+</script>
+"""
+
+# Function to display JavaScript
+def display_js():
+    components.html(js_code, height=0)
+
+# Display the JavaScript widget to get the location
+st.subheader("Getting Your Location...")
+display_js()
+
+# Function to retrieve location from query params
+def get_location_from_js():
+    location = st.experimental_get_query_params()
+    if 'lat' in location and 'lon' in location:
+        return float(location['lat'][0]), float(location['lon'][0])
+    return None, None
+
+latitude, longitude = get_location_from_js()
+
+if latitude and longitude:
+    st.write(f"Detected Location: Latitude {latitude}, Longitude {longitude}")
+
+# Streamlit app title
+st.title("Roadway Infrastructure Monitoring System")
+
+st.sidebar.header("Upload Image/Video or Provide a URL")
+
+# Options for the user to select
+option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image", "URL Video"))
+
+# Set the default confidence threshold value
+confidence_threshold = st.sidebar.slider(
+    "Detection Confidence Threshold",
+    0.0,  # Minimum value
+    1.0,  # Maximum value
+    0.5  # Default value
+)
 
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
