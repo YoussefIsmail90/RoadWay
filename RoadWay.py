@@ -26,7 +26,7 @@ load_dotenv()
 # Function to get location based on IP
 def get_ip_location(api_key):
     try:
-        response = requests.get(f'http://api.ipapi.com/api/check?access_key={api_key}')
+        response = requests.get(f'http://api.ipapi.com/api/check?access_key={"8880903e9a1b4ecc92894373d343cbbb"}')
         response.raise_for_status()  # Check if the request was successful
         data = response.json()
         lat = data.get('latitude', 30.0444)  # Default to Cairo, Egypt if not found
