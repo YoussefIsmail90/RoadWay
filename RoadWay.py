@@ -7,6 +7,7 @@ import numpy as np
 import tempfile
 import cv2
 from ultralytics import YOLO
+from dotenv import load_dotenv
 
 # Load the YOLOv8 model
 try:
@@ -17,9 +18,20 @@ except Exception as e:
     st.stop()
 
 # Function to get location based on IP
-def get_ip_location(api_key):
+
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Function to get location based on IP
+def get_ip_location():
+    api_key = os.getenv('IPAPI_API_KEY')  # Get the API key from environment variables
+    if not api_key:
+        st.error("API key not found. Please set the IPAPI_API_KEY environment variable.")
+        return 30.0444, 31.2357  # Default to Cairo, Egypt if API key is not set
+
     try:
-        response = requests.get(f'http://api.ipapi.com/api/check?access_key={"8880903e9a1b4ecc92894373d343cbbb"}')
+        response = requests.get(f'http://api.ipapi.com/api/check?access_key={api_key}')
         data = response.json()
         lat = data.get('latitude', 30.0444)  # Default to Cairo, Egypt if not found
         lon = data.get('longitude', 31.2357)  # Default to Cairo, Egypt if not found
@@ -27,6 +39,7 @@ def get_ip_location(api_key):
     except Exception as e:
         st.error(f"Failed to get location: {e}")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
+
 
 # Function to display the map with Folium
 def display_map(lat, lon):
