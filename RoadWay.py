@@ -8,6 +8,15 @@ import tempfile
 import cv2
 import requests
 from io import BytesIO
+from ultralytics import YOLO
+
+# Load the YOLOv8 model
+try:
+    model = YOLO('yolov8_road_damage.pt')
+    st.success("Model loaded successfully!")
+except Exception as e:
+    st.error(f"Failed to load the YOLOv8 model: {e}")
+    st.stop()
 
 # Function to display the JavaScript widget
 def display_location_widget():
@@ -50,8 +59,31 @@ confidence_threshold = st.sidebar.slider(
     "Detection Confidence Threshold",
     0.0,  # Minimum value
     1.0,  # Maximum value
-    0.01  # Default value
+    0.5  # Default value
 )
+
+def process_image(image_np):
+    # Perform object detection
+    results = model.predict(source=image_np, conf=confidence_threshold)
+    img_with_boxes = results[0].plot()
+    return img_with_boxes
+
+def process_video(video_path):
+    # Process video frame by frame
+    video_cap = cv2.VideoCapture(video_path)
+    stframe = st.empty()
+    while video_cap.isOpened():
+        ret, frame = video_cap.read()
+        if not ret:
+            break
+
+        frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
+        results = model.predict(source=frame, conf=confidence_threshold)
+        frame_with_boxes = results[0].plot()
+
+        stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
+    
+    video_cap.release()
 
 if option == "Upload Image":
     uploaded_file = st.sidebar.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -59,10 +91,13 @@ if option == "Upload Image":
         image = Image.open(uploaded_file)
         st.image(image, caption='Uploaded Image.', use_column_width=True)
         
-        # Simulate image processing here
-        st.subheader("Image Processing Results")
-        st.write("Detected image with simulated results.")
+        image_np = np.array(image)
+        with st.spinner('Processing image...'):
+            img_with_boxes = process_image(image_np)
         
+        st.subheader("Detection Results")
+        st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
+
         # Display the map with the selected coordinates
         if latitude and longitude:
             display_map(latitude, longitude)
@@ -73,19 +108,7 @@ elif option == "Upload Video":
         st.subheader("Processing Video...")
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_file.read())
-        video_cap = cv2.VideoCapture(tfile.name)
-        
-        stframe = st.empty()
-        while video_cap.isOpened():
-            ret, frame = video_cap.read()
-            if not ret:
-                break
-
-            frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
-            # Simulate video processing here
-            stframe.image(frame, channels="BGR", use_column_width=True)
-        
-        video_cap.release()
+        process_video(tfile.name)
         
         # Display the map with the selected coordinates
         if latitude and longitude:
@@ -98,10 +121,13 @@ elif option == "URL Image":
         image = Image.open(BytesIO(response.content))
         st.image(image, caption='Image from URL.', use_column_width=True)
         
-        # Simulate image processing here
-        st.subheader("Image Processing Results")
-        st.write("Detected image with simulated results.")
+        image_np = np.array(image)
+        with st.spinner('Processing image...'):
+            img_with_boxes = process_image(image_np)
         
+        st.subheader("Detection Results")
+        st.image(img_with_boxes, caption="Detected Image", use_column_width=True)
+
         # Display the map with the selected coordinates
         if latitude and longitude:
             display_map(latitude, longitude)
@@ -123,11 +149,14 @@ elif option == "URL Video":
             frame_count += 1
             if frame_count % frame_interval == 0:
                 frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
-                # Simulate video processing here
-                stframe.image(frame, channels="BGR", use_column_width=True)
+                results = model.predict(source=frame, conf=confidence_threshold)
+                frame_with_boxes = results[0].plot()
+
+                stframe.image(frame_with_boxes, channels="BGR", use_column_width=True)
         
         video_cap.release()
 
         # Display the map with the selected coordinates
         if latitude and longitude:
             display_map(latitude, longitude)
+
