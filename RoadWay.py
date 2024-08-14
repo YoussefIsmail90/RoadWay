@@ -24,7 +24,7 @@ except Exception as e:
 
 # Function to get location based on IP using ipinfo.io
 def get_ip_location():
-    api_key = os.getenv('IPINFO_API_KEY')
+    api_key = os.getenv('GOOGLE_MAPS_API_KEY')
     if not api_key:
         st.error("API key for ipinfo.io is missing.")
         return 30.0444, 31.2357  # Default to Cairo, Egypt
