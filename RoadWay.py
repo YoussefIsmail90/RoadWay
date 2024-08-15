@@ -19,14 +19,14 @@ load_dotenv()
 # Load YOLO models
 try:
     model_existing = YOLO('yolov8n.pt')
-    st.success("YOLOv8n model loaded successfully!")
+    # st.success("YOLOv8n model loaded successfully!")
 except Exception as e:
     st.error(f"Failed to load YOLOv8n model: {e}")
     st.stop()
 
 try:
     model_new = YOLO('yolov8_road_damage.pt')
-    st.success("YOLOv8 Road Damage model loaded successfully!")
+    # st.success("YOLOv8 Road Damage model loaded successfully!")
 except Exception as e:
     st.error(f"Failed to load YOLOv8 Road Damage model: {e}")
     st.stop()
