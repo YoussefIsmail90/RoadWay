@@ -11,3 +11,4 @@ geocoder
 streamlit-webrtc
 geopy
 python-dotenv
+gmplot
