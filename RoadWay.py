@@ -108,11 +108,23 @@ def get_image_gps(image):
 
 # Function to display the map using gmplot
 def display_map(lat, lon):
-    gmap = gmplot.GoogleMapPlotter(lat, lon, 13)
+    # Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your actual Google Maps API key
+    gmap = gmplot.GoogleMapPlotter(lat, lon, 13, apikey='747243ec917dc3f794b9b19d06dcb8586b8f87b236234f7b7d6b353750c1a3e4')
     gmap.marker(lat, lon, color='red')
+    
+    # Save the map as an HTML file in a temporary location
     map_file = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
     gmap.draw(map_file.name)
-    st.components.v1.html(open(map_file.name, 'r').read(), height=500)
+    
+    # Display the HTML map in Streamlit
+    with open(map_file.name, 'r') as file:
+        map_html = file.read()
+    
+    st.components.v1.html(map_html, height=500)
+
+    # Clean up the temporary file
+    os.remove(map_file.name)
+
 
 # Streamlit app title
 st.title("Roadway Infrastructure Monitoring System")
