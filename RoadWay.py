@@ -63,7 +63,7 @@ def overlay_detections(image_np, results_existing, results_new):
 # Function to process image with both models
 def process_image(image_np):
     # Check the shape of the image
-    st.write(f"Image shape: {image_np.shape}")
+    # st.write(f"Image shape: {image_np.shape}")
 
     # Convert grayscale to RGB if necessary
     if len(image_np.shape) == 2:  # Grayscale image
