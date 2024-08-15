@@ -5,7 +5,9 @@ import tempfile
 import cv2
 from ultralytics import YOLO
 from geopy.geocoders import Nominatim
-from gmplot import gmplot
+from serpapi import GoogleSearch
+import folium
+from streamlit_folium import st_folium
 import os
 
 # Load YOLO models
@@ -106,25 +108,29 @@ def get_image_gps(image):
         st.warning(f"Error extracting GPS data: {e}")
         return None, None
 
-# Function to display the map using gmplot
-def display_map(lat, lon):
-    # Replace 'YOUR_GOOGLE_MAPS_API_KEY' with your actual Google Maps API key
-    gmap = gmplot.GoogleMapPlotter(lat, lon, 13, apikey='747243ec917dc3f794b9b19d06dcb8586b8f87b236234f7b7d6b353750c1a3e4')
-    gmap.marker(lat, lon, color='red')
-    
-    # Save the map as an HTML file in a temporary location
-    map_file = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
-    gmap.draw(map_file.name)
-    
-    # Display the HTML map in Streamlit
-    with open(map_file.name, 'r') as file:
-        map_html = file.read()
-    
-    st.components.v1.html(map_html, height=500)
+# Function to get location name using SerpAPI
+def get_location_name(lat, lon):
+    params = {
+        "q": f"{lat},{lon}",
+        "location": "United States",
+        "google_domain": "google.com",
+        "hl": "en",
+        "gl": "us",
+        "api_key": "YOUR_SERPAPI_KEY"  # Replace with your SerpAPI key
+    }
 
-    # Clean up the temporary file
-    os.remove(map_file.name)
+    search = GoogleSearch(params)
+    results = search.get_dict()
 
+    if "local_results" in results:
+        return results['local_results']['places'][0]['title']
+    return "Unknown Location"
+
+# Function to display the map using folium
+def display_map(lat, lon, location_name):
+    m = folium.Map(location=[lat, lon], zoom_start=13)
+    folium.Marker([lat, lon], popup=location_name).add_to(m)
+    st_folium(m, width=700, height=500)
 
 # Streamlit app title
 st.title("Roadway Infrastructure Monitoring System")
@@ -148,7 +154,8 @@ if option == "Upload Image":
         
         lat, lon = get_image_gps(image)
         if lat and lon:
-            display_map(lat, lon)
+            location_name = get_location_name(lat, lon)
+            display_map(lat, lon, location_name)
         else:
             st.warning("Location could not be determined from the image metadata.")
         
@@ -166,31 +173,3 @@ elif option == "Upload Video":
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_file.read())
         process_video(tfile.name, frame_interval=5)
-
-# Function to process video with both models
-def process_video(video_path, frame_interval):
-    video_cap = cv2.VideoCapture(video_path)
-    stframe = st.empty()
-    frame_count = 0
-    
-    while video_cap.isOpened():
-        ret, frame = cv2.VideoCapture(video_path).read()
-        if not ret:
-            break
-
-        frame_count += 1
-        if frame_count % frame_interval == 0:
-            frame = cv2.resize(frame, (640, 360)) 
-            if frame.shape[2] == 3:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            else:
-                frame_rgb = frame
-            
-            results_existing = model_existing.predict(source=frame_rgb, conf=confidence_threshold, classes=desired_class_indices)
-            results_new = model_new.predict(source=frame_rgb, conf=confidence_threshold)
-            
-            combined_frame = overlay_detections(frame_rgb, results_existing, results_new)
-            
-            stframe.image(combined_frame, caption="Combined Detection Results", channels="BGR", use_column_width=True)
-    
-    video_cap.release()
