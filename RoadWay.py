@@ -31,6 +31,20 @@ except Exception as e:
     st.error(f"Failed to load YOLOv8 Road Damage model: {e}")
     st.stop()
 
+# Desired class indices for yolov8n_custom_classes.pt
+desired_classes = {
+    'Bus': 5,
+    'Train': 6,
+    'Truck': 7,
+    'Traffic light': 9,
+    'Fire hydrant': 10,
+    'Stop sign': 11,
+    'Bicycle': 1,
+    'Car': 2,
+    'Motorbike': 3
+}
+desired_class_indices = list(desired_classes.values())
+
 # Function to display the map with Folium
 def display_map(lat, lon):
     m = folium.Map(location=[lat, lon], zoom_start=6)
@@ -62,9 +76,6 @@ def overlay_detections(image_np, results_existing, results_new):
 
 # Function to process image with both models
 def process_image(image_np):
-    # Check the shape of the image
-    # st.write(f"Image shape: {image_np.shape}")
-
     # Convert grayscale to RGB if necessary
     if len(image_np.shape) == 2:  # Grayscale image
         image_rgb = cv2.cvtColor(image_np, cv2.COLOR_GRAY2RGB)
@@ -74,16 +85,16 @@ def process_image(image_np):
         st.error("Unexpected image format. Ensure the image has three channels.")
         return image_np  # Return the original image or handle the error as needed
 
-    # Process the image with both models
-    results_existing = model_existing.predict(source=image_rgb, conf=confidence_threshold)
+    # Process the image with the YOLOv8n model and filter by desired classes
+    results_existing = model_existing.predict(source=image_rgb, conf=confidence_threshold, classes=desired_class_indices)
+    
+    # Process the image with the YOLOv8 road damage model (no filtering)
     results_new = model_new.predict(source=image_rgb, conf=confidence_threshold)
     
     # Combine detection results
     combined_img = overlay_detections(image_rgb, results_existing, results_new)
     
     return combined_img
-
-
 
 # Function to process video with both models
 def process_video(video_path, frame_interval):
@@ -106,7 +117,10 @@ def process_video(video_path, frame_interval):
             else:
                 frame_rgb = frame
             
-            results_existing = model_existing.predict(source=frame_rgb, conf=confidence_threshold)
+            # Apply class filter to the YOLOv8n model's predictions
+            results_existing = model_existing.predict(source=frame_rgb, conf=confidence_threshold, classes=desired_class_indices)
+            
+            # Process the video frame with the YOLOv8 road damage model (no filtering)
             results_new = model_new.predict(source=frame_rgb, conf=confidence_threshold)
             
             combined_frame = overlay_detections(frame_rgb, results_existing, results_new)
