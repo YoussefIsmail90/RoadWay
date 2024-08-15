@@ -18,7 +18,7 @@ load_dotenv()
 
 # Load YOLO models
 try:
-    model_existing = YOLO('yolov8n.pt')
+    model_existing = YOLO('yolov8n_custom_classes.pt')
     # st.success("YOLOv8n model loaded successfully!")
 except Exception as e:
     st.error(f"Failed to load YOLOv8n model: {e}")
