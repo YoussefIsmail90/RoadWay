@@ -62,10 +62,17 @@ def overlay_detections(image_np, results_existing, results_new):
 
 # Function to process image with both models
 def process_image(image_np):
-    results_existing = model_existing.predict(source=image_np, conf=confidence_threshold)
-    results_new = model_new.predict(source=image_np, conf=confidence_threshold)
+    # Convert BGR to RGB if necessary
+    if image_np.shape[2] == 3:  # Check if the image has 3 channels
+        image_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+    else:
+        image_rgb = image_np
     
-    combined_img = overlay_detections(image_np, results_existing, results_new)
+    # Ensure the image is in the right format for YOLO
+    results_existing = model_existing.predict(source=image_rgb, conf=confidence_threshold)
+    results_new = model_new.predict(source=image_rgb, conf=confidence_threshold)
+    
+    combined_img = overlay_detections(image_rgb, results_existing, results_new)
     
     return combined_img
 
@@ -83,10 +90,17 @@ def process_video(video_path, frame_interval):
         frame_count += 1
         if frame_count % frame_interval == 0:
             frame = cv2.resize(frame, (640, 360))  # Resize for faster processing
-            results_existing = model_existing.predict(source=frame, conf=confidence_threshold)
-            results_new = model_new.predict(source=frame, conf=confidence_threshold)
             
-            combined_frame = overlay_detections(frame, results_existing, results_new)
+            # Convert BGR to RGB if necessary
+            if frame.shape[2] == 3:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            else:
+                frame_rgb = frame
+            
+            results_existing = model_existing.predict(source=frame_rgb, conf=confidence_threshold)
+            results_new = model_new.predict(source=frame_rgb, conf=confidence_threshold)
+            
+            combined_frame = overlay_detections(frame_rgb, results_existing, results_new)
             
             stframe.image(combined_frame, caption="Combined Detection Results", channels="BGR", use_column_width=True)
     
@@ -206,7 +220,6 @@ elif option == "URL Image":
 elif option == "URL Video":
     video_url = st.sidebar.text_input("Enter Video URL")
     if video_url:
-        frame_interval = st.sidebar.slider("Process Every nth Frame", 1, 30, 5)
         st.subheader("Processing Video from URL...")
-        Thread(target=handle_url_video, args=(video_url, frame_interval)).start()
+        handle_url_video(video_url, frame_interval=5)
         display_map(latitude, longitude)
