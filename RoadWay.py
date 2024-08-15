@@ -41,15 +41,33 @@ def display_map(lat, lon):
     ).add_to(m)
     st_folium(m, width=700, height=500)
 
+# Function to overlay detections from two models
+def overlay_detections(image_np, results_existing, results_new):
+    img_with_boxes_existing = results_existing[0].plot()
+    img_with_boxes_new = results_new[0].plot()
+    
+    # Convert to PIL Image for overlay
+    img_with_boxes_existing_pil = Image.fromarray(img_with_boxes_existing)
+    img_with_boxes_new_pil = Image.fromarray(img_with_boxes_new)
+    
+    # Convert to RGBA for better blending
+    img_with_boxes_existing_pil = img_with_boxes_existing_pil.convert("RGBA")
+    img_with_boxes_new_pil = img_with_boxes_new_pil.convert("RGBA")
+    
+    # Combine the images
+    combined_img_pil = Image.blend(img_with_boxes_existing_pil, img_with_boxes_new_pil, alpha=0.5)
+    combined_img = np.array(combined_img_pil)
+    
+    return combined_img
+
 # Function to process image with both models
 def process_image(image_np):
     results_existing = model_existing.predict(source=image_np, conf=confidence_threshold)
     results_new = model_new.predict(source=image_np, conf=confidence_threshold)
     
-    img_with_boxes_existing = results_existing[0].plot()
-    img_with_boxes_new = results_new[0].plot()
+    combined_img = overlay_detections(image_np, results_existing, results_new)
     
-    return img_with_boxes_existing, img_with_boxes_new
+    return combined_img
 
 # Function to process video with both models
 def process_video(video_path, frame_interval):
@@ -68,11 +86,9 @@ def process_video(video_path, frame_interval):
             results_existing = model_existing.predict(source=frame, conf=confidence_threshold)
             results_new = model_new.predict(source=frame, conf=confidence_threshold)
             
-            frame_with_boxes_existing = results_existing[0].plot()
-            frame_with_boxes_new = results_new[0].plot()
+            combined_frame = overlay_detections(frame, results_existing, results_new)
             
-            stframe.image(frame_with_boxes_existing, caption="YOLOv8n Results", channels="BGR", use_column_width=True)
-            stframe.image(frame_with_boxes_new, caption="YOLOv8 Road Damage Results", channels="BGR", use_column_width=True)
+            stframe.image(combined_frame, caption="Combined Detection Results", channels="BGR", use_column_width=True)
     
     video_cap.release()
 
@@ -153,11 +169,10 @@ if option == "Upload Image":
         
         image_np = np.array(image)
         with st.spinner('Processing image...'):
-            img_with_boxes_existing, img_with_boxes_new = process_image(image_np)
+            combined_img = process_image(image_np)
         
         st.subheader("Detection Results")
-        st.image(img_with_boxes_existing, caption="YOLOv8n Results", use_column_width=True)
-        st.image(img_with_boxes_new, caption="YOLOv8 Road Damage Results", use_column_width=True)
+        st.image(combined_img, caption="Combined Detection Results", use_column_width=True)
 
         # Display the map with the detected location
         display_map(latitude, longitude)
@@ -180,11 +195,10 @@ elif option == "URL Image":
         
         image_np = np.array(image)
         with st.spinner('Processing image...'):
-            img_with_boxes_existing, img_with_boxes_new = process_image(image_np)
+            combined_img = process_image(image_np)
         
         st.subheader("Detection Results")
-        st.image(img_with_boxes_existing, caption="YOLOv8n Results", use_column_width=True)
-        st.image(img_with_boxes_new, caption="YOLOv8 Road Damage Results", use_column_width=True)
+        st.image(combined_img, caption="Combined Detection Results", use_column_width=True)
 
         # Display the map with the detected location
         display_map(latitude, longitude)
