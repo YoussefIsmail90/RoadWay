@@ -116,7 +116,7 @@ def get_location_name(lat, lon):
         "google_domain": "google.com",
         "hl": "en",
         "gl": "us",
-        "api_key": "YOUR_SERPAPI_KEY"  # Replace with your SerpAPI key
+        "api_key": "747243ec917dc3f794b9b19d06dcb8586b8f87b236234f7b7d6b353750c1a3e4"  # Replace with your SerpAPI key
     }
 
     search = GoogleSearch(params)
