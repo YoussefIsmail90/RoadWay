@@ -1,31 +1,24 @@
 import streamlit as st
-import requests
-import folium
-from streamlit_folium import st_folium
 from PIL import Image
 import numpy as np
 import tempfile
 import cv2
 from ultralytics import YOLO
-from dotenv import load_dotenv
+from geopy.geocoders import Nominatim
+from gmplot import gmplot
 import os
 from io import BytesIO
-import streamlit.components.v1 as components
-
-# Load environment variables from .env file
-load_dotenv()
+import requests
 
 # Load YOLO models
 try:
     model_existing = YOLO('yolov8n_custom_classes.pt')
-    # st.success("YOLOv8n model loaded successfully!")
 except Exception as e:
     st.error(f"Failed to load YOLOv8n model: {e}")
     st.stop()
 
 try:
     model_new = YOLO('yolov8_road_damage.pt')
-    # st.success("YOLOv8 Road Damage model loaded successfully!")
 except Exception as e:
     st.error(f"Failed to load YOLOv8 Road Damage model: {e}")
     st.stop()
@@ -43,16 +36,6 @@ desired_classes = {
     'Motorbike': 3
 }
 desired_class_indices = list(desired_classes.values())
-
-# Function to display the map with Folium
-def display_map(lat, lon):
-    m = folium.Map(location=[lat, lon], zoom_start=6)
-    folium.Marker(
-        [lat, lon],
-        popup="Reported Damage Location",
-        icon=folium.Icon(color="red")
-    ).add_to(m)
-    st_folium(m, width=700, height=500)
 
 # Function to overlay detections from two models
 def overlay_detections(image_np, results_existing, results_new):
@@ -128,40 +111,24 @@ def process_video(video_path, frame_interval):
     
     video_cap.release()
 
-# Function to handle URL video
-def download_video(video_url):
-    response = requests.get(video_url, stream=True)
-    tfile = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    with open(tfile.name, 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            if chunk:
-                f.write(chunk)
-    return tfile.name
+# Function to get geolocation from an address using geopy
+def get_geolocation(address):
+    geolocator = Nominatim(user_agent="geoapiExercises")
+    location = geolocator.geocode(address)
+    if location:
+        return location.latitude, location.longitude
+    else:
+        st.error("Unable to find the location.")
+        return None, None
 
-def handle_url_video(video_url, frame_interval):
-    video_path = download_video(video_url)
-    process_video(video_path, frame_interval)
-
-# Function to get location from JavaScript
-def get_location_js():
-    location_js = """
-    <script>
-    function sendLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                const queryParams = new URLSearchParams({ lat, lon }).toString();
-                window.parent.postMessage(queryParams, "*");
-            });
-        } else {
-            alert("Geolocation is not supported by this browser.");
-        }
-    }
-    sendLocation();
-    </script>
-    """
-    components.html(location_js, height=0, width=0)
+# Function to display the map using gmplot
+def display_map(lat, lon):
+    gmap = gmplot.GoogleMapPlotter(lat, lon, 13)
+    gmap.marker(lat, lon, color='red')
+    # Save the map as an HTML file
+    map_file = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+    gmap.draw(map_file.name)
+    st.components.v1.html(open(map_file.name, 'r').read(), height=500)
 
 # Streamlit app title
 st.title("Roadway Infrastructure Monitoring System")
@@ -176,25 +143,8 @@ confidence_threshold = st.sidebar.slider(
     "Detection Confidence Threshold",
     0.0,  # Minimum value
     1.0,  # Maximum value
-    0.1  # Default value
+    0.5  # Default value
 )
-
-# Initialize default location
-latitude, longitude = 30.0444, 31.2357  # Default to Cairo, Egypt
-
-# Display JavaScript for geolocation
-get_location_js()
-
-# Handle incoming messages from JavaScript
-def handle_message():
-    global latitude, longitude
-    message = st.experimental_get_query_params().get('data', [None])[0]
-    if message:
-        params_dict = dict(param.split('=') for param in message.split('&'))
-        latitude = float(params_dict.get('lat', latitude))
-        longitude = float(params_dict.get('lon', longitude))
-
-handle_message()
 
 # Main application logic
 if option == "Upload Image":
@@ -210,8 +160,12 @@ if option == "Upload Image":
         st.subheader("Detection Results")
         st.image(combined_img, caption="Combined Detection Results", use_column_width=True)
 
-        # Display the map with the detected location
-        display_map(latitude, longitude)
+        # Get address from user and plot location
+        address = st.text_input("Enter the location address:")
+        if address:
+            lat, lon = get_geolocation(address)
+            if lat and lon:
+                display_map(lat, lon)
 
 elif option == "Upload Video":
     uploaded_file = st.sidebar.file_uploader("Choose a video...", type=["mp4", "mov", "avi"])
@@ -220,7 +174,13 @@ elif option == "Upload Video":
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_file.read())
         process_video(tfile.name, frame_interval=5)
-        display_map(latitude, longitude)
+
+        # Get address from user and plot location
+        address = st.text_input("Enter the location address:")
+        if address:
+            lat, lon = get_geolocation(address)
+            if lat and lon:
+                display_map(lat, lon)
 
 elif option == "URL Image":
     image_url = st.sidebar.text_input("Enter Image URL")
@@ -236,5 +196,9 @@ elif option == "URL Image":
         st.subheader("Detection Results")
         st.image(combined_img, caption="Combined Detection Results", use_column_width=True)
 
-        # Display the map with the detected location
-        display_map(latitude, longitude)
+        # Get address from user and plot location
+        address = st.text_input("Enter the location address:")
+        if address:
+            lat, lon = get_geolocation(address)
+            if lat and lon:
+                display_map(lat, lon)
