@@ -65,20 +65,24 @@ def process_image(image_np):
     # Check the shape of the image
     st.write(f"Image shape: {image_np.shape}")
 
-    # Convert BGR to RGB if necessary
-    if len(image_np.shape) == 3 and image_np.shape[2] == 3:
-        image_rgb = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+    # Convert grayscale to RGB if necessary
+    if len(image_np.shape) == 2:  # Grayscale image
+        image_rgb = cv2.cvtColor(image_np, cv2.COLOR_GRAY2RGB)
+    elif len(image_np.shape) == 3 and image_np.shape[2] == 3:  # Color image
+        image_rgb = image_np
     else:
         st.error("Unexpected image format. Ensure the image has three channels.")
         return image_np  # Return the original image or handle the error as needed
 
-    # Ensure the image is in the right format for YOLO
+    # Process the image with both models
     results_existing = model_existing.predict(source=image_rgb, conf=confidence_threshold)
     results_new = model_new.predict(source=image_rgb, conf=confidence_threshold)
     
+    # Combine detection results
     combined_img = overlay_detections(image_rgb, results_existing, results_new)
     
     return combined_img
+
 
 
 # Function to process video with both models
