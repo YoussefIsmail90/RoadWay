@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 import os
 from io import BytesIO
 import streamlit.components.v1 as components
-from threading import Thread
 
 # Load environment variables from .env file
 load_dotenv()
@@ -170,7 +169,7 @@ st.title("Roadway Infrastructure Monitoring System")
 st.sidebar.header("Upload Image/Video or Provide a URL")
 
 # Options for the user to select
-option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image", "URL Video"))
+option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video", "URL Image"))
 
 # Set the default confidence threshold value
 confidence_threshold = st.sidebar.slider(
@@ -238,11 +237,4 @@ elif option == "URL Image":
         st.image(combined_img, caption="Combined Detection Results", use_column_width=True)
 
         # Display the map with the detected location
-        display_map(latitude, longitude)
-
-elif option == "URL Video":
-    video_url = st.sidebar.text_input("Enter Video URL")
-    if video_url:
-        st.subheader("Processing Video from URL...")
-        handle_url_video(video_url, frame_interval=5)
         display_map(latitude, longitude)
