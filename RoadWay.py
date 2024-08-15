@@ -72,7 +72,7 @@ def get_image_gps(image):
     try:
         exif_data = image._getexif()
         if exif_data is None:
-            st.warning("No EXIF data found.")
+            # st.warning("No EXIF data found.")
             return None, None
 
         gps_info = {}
@@ -83,7 +83,7 @@ def get_image_gps(image):
                 break
 
         if not gps_info:
-            st.warning("No GPS information found in EXIF data.")
+            # st.warning("No GPS information found in EXIF data.")
             return None, None
 
         def _convert_to_degrees(value):
@@ -122,7 +122,7 @@ confidence_threshold = st.sidebar.slider(
     "Detection Confidence Threshold",
     0.0,  
     1.0,  
-    0.5  
+    0.25  
 )
 
 if option == "Upload Image":
