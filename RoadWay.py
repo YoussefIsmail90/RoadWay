@@ -68,34 +68,6 @@ def process_image(image_np):
     
     return combined_img
 
-# Function to process video with both models
-def process_video(video_path, frame_interval):
-    video_cap = cv2.VideoCapture(video_path)
-    stframe = st.empty()
-    frame_count = 0
-    
-    while video_cap.isOpened():
-        ret, frame = video_cap.read()
-        if not ret:
-            break
-
-        frame_count += 1
-        if frame_count % frame_interval == 0:
-            frame = cv2.resize(frame, (640, 360)) 
-            if frame.shape[2] == 3:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            else:
-                frame_rgb = frame
-            
-            results_existing = model_existing.predict(source=frame_rgb, conf=confidence_threshold, classes=desired_class_indices)
-            results_new = model_new.predict(source=frame_rgb, conf=confidence_threshold)
-            
-            combined_frame = overlay_detections(frame_rgb, results_existing, results_new)
-            
-            stframe.image(combined_frame, caption="Combined Detection Results", channels="BGR", use_column_width=True)
-    
-    video_cap.release()
-
 # Function to extract GPS coordinates from image metadata
 def get_image_gps(image):
     try:
@@ -182,3 +154,31 @@ elif option == "Upload Video":
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(uploaded_file.read())
         process_video(tfile.name, frame_interval=5)
+
+# Function to process video with both models
+def process_video(video_path, frame_interval):
+    video_cap = cv2.VideoCapture(video_path)
+    stframe = st.empty()
+    frame_count = 0
+    
+    while video_cap.isOpened():
+        ret, frame = cv2.VideoCapture(video_path).read()
+        if not ret:
+            break
+
+        frame_count += 1
+        if frame_count % frame_interval == 0:
+            frame = cv2.resize(frame, (640, 360)) 
+            if frame.shape[2] == 3:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            else:
+                frame_rgb = frame
+            
+            results_existing = model_existing.predict(source=frame_rgb, conf=confidence_threshold, classes=desired_class_indices)
+            results_new = model_new.predict(source=frame_rgb, conf=confidence_threshold)
+            
+            combined_frame = overlay_detections(frame_rgb, results_existing, results_new)
+            
+            stframe.image(combined_frame, caption="Combined Detection Results", channels="BGR", use_column_width=True)
+    
+    video_cap.release()
