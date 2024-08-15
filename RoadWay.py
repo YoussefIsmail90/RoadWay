@@ -6,6 +6,7 @@ import cv2
 from ultralytics import YOLO
 import folium
 from streamlit_folium import st_folium
+
 # Load YOLO models
 try:
     model_existing = YOLO('yolov8n_custom_classes.pt')
