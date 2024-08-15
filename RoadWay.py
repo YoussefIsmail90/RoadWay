@@ -176,7 +176,7 @@ confidence_threshold = st.sidebar.slider(
     "Detection Confidence Threshold",
     0.0,  # Minimum value
     1.0,  # Maximum value
-    0.5  # Default value
+    0.1  # Default value
 )
 
 # Initialize default location
