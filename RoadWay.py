@@ -4,11 +4,8 @@ import numpy as np
 import tempfile
 import cv2
 from ultralytics import YOLO
-from geopy.geocoders import Nominatim
-from serpapi import GoogleSearch
 import folium
 from streamlit_folium import st_folium
-import os
 
 # Load YOLO models
 try:
@@ -108,28 +105,10 @@ def get_image_gps(image):
         st.warning(f"Error extracting GPS data: {e}")
         return None, None
 
-# Function to get location name using SerpAPI
-def get_location_name(lat, lon):
-    params = {
-        "q": f"{lat},{lon}",
-        "location": "United States",
-        "google_domain": "google.com",
-        "hl": "en",
-        "gl": "us",
-        "api_key": "747243ec917dc3f794b9b19d06dcb8586b8f87b236234f7b7d6b353750c1a3e4"  # Replace with your SerpAPI key
-    }
-
-    search = GoogleSearch(params)
-    results = search.get_dict()
-
-    if "local_results" in results:
-        return results['local_results']['places'][0]['title']
-    return "Unknown Location"
-
-# Function to display the map using folium
-def display_map(lat, lon, location_name):
+# Function to display the map using Folium
+def display_map(lat, lon):
     m = folium.Map(location=[lat, lon], zoom_start=13)
-    folium.Marker([lat, lon], popup=location_name).add_to(m)
+    folium.Marker([lat, lon], popup="Location").add_to(m)
     st_folium(m, width=700, height=500)
 
 # Streamlit app title
@@ -154,8 +133,7 @@ if option == "Upload Image":
         
         lat, lon = get_image_gps(image)
         if lat and lon:
-            location_name = get_location_name(lat, lon)
-            display_map(lat, lon, location_name)
+            display_map(lat, lon)
         else:
             st.warning("Location could not be determined from the image metadata.")
         
