@@ -12,5 +12,4 @@ streamlit-webrtc
 geopy
 python-dotenv
 gmplot
-serpapi
-cv2
+opencv
