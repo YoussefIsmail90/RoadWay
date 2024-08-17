@@ -34,29 +34,21 @@ desired_classes = {
 }
 desired_class_indices = list(desired_classes.values())
 
-# Function to draw bounding boxes and labels manually
-def draw_boxes(image, results, color):
-    for result in results[0].boxes:
-        x1, y1, x2, y2 = map(int, result.xyxy)
-        label = result.cls
-        confidence = result.conf
-        cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(image, f"{label} {confidence:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-# Function to overlay detections with separate colors
-def overlay_detections_separately(image_np, results_existing, results_new):
-    img_with_boxes_existing = image_np.copy()
-    img_with_boxes_new = image_np.copy()
-
-    # Draw boxes using the manual method
-    draw_boxes(img_with_boxes_existing, results_existing, (0, 255, 0))
-    draw_boxes(img_with_boxes_new, results_new, (255, 0, 0))
-
-    # Adjust transparency
-    combined_img_existing = cv2.addWeighted(image_np, 1, img_with_boxes_existing, 0.5, 0)
-    combined_img_new = cv2.addWeighted(combined_img_existing, 1, img_with_boxes_new, 0.5, 0)
+# Function to overlay detections from two models
+def overlay_detections(image_np, results_existing, results_new):
+    img_with_boxes_existing = results_existing[0].plot()
+    img_with_boxes_new = results_new[0].plot()
     
-    return combined_img_new
+    img_with_boxes_existing_pil = Image.fromarray(img_with_boxes_existing)
+    img_with_boxes_new_pil = Image.fromarray(img_with_boxes_new)
+    
+    img_with_boxes_existing_pil = img_with_boxes_existing_pil.convert("RGBA")
+    img_with_boxes_new_pil = img_with_boxes_new_pil.convert("RGBA")
+    
+    combined_img_pil = Image.blend(img_with_boxes_existing_pil, img_with_boxes_new_pil, alpha=0.5)
+    combined_img = np.array(combined_img_pil)
+    
+    return combined_img
 
 # Function to process image with both models
 def process_image(image_np):
@@ -71,7 +63,7 @@ def process_image(image_np):
     results_existing = model_existing.predict(source=image_rgb, conf=confidence_threshold, classes=desired_class_indices)
     results_new = model_new.predict(source=image_rgb, conf=confidence_threshold)
     
-    combined_img = overlay_detections_separately(image_rgb, results_existing, results_new)
+    combined_img = overlay_detections(image_rgb, results_existing, results_new)
     
     return combined_img
 
@@ -80,6 +72,7 @@ def get_image_gps(image):
     try:
         exif_data = image._getexif()
         if exif_data is None:
+            # st.warning("No EXIF data found.")
             return None, None
 
         gps_info = {}
@@ -90,6 +83,7 @@ def get_image_gps(image):
                 break
 
         if not gps_info:
+            # st.warning("No GPS information found in EXIF data.")
             return None, None
 
         def _convert_to_degrees(value):
@@ -117,31 +111,10 @@ def display_map(lat, lon):
     folium.Marker([lat, lon], popup="Location").add_to(m)
     st_folium(m, width=700, height=500)
 
-# Function to process video
-def process_video(video_path, frame_interval=5):
-    cap = cv2.VideoCapture(video_path)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    
-    stframe = st.empty()
-    
-    for i in range(frame_count):
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        if i % frame_interval == 0:
-            results_existing = model_existing.predict(source=frame, conf=confidence_threshold, classes=desired_class_indices)
-            results_new = model_new.predict(source=frame, conf=confidence_threshold)
-            
-            combined_frame = overlay_detections_separately(frame, results_existing, results_new)
-            stframe.image(combined_frame, channels="RGB", use_column_width=True)
-
-    cap.release()
-
 # Streamlit app title
 st.title("Roadway Infrastructure Monitoring System")
 
-st.sidebar.header("Upload Image/Video")
+st.sidebar.header("Upload Image")
 
 option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video"))
 
@@ -161,6 +134,8 @@ if option == "Upload Image":
         lat, lon = get_image_gps(image)
         if lat and lon:
             display_map(lat, lon)
+        # else:
+            # st.warning("Location could not be determined from the image metadata.")
         
         image_np = np.array(image)
         with st.spinner('Processing image...'):
@@ -168,11 +143,3 @@ if option == "Upload Image":
         
         st.subheader("Detection Results")
         st.image(combined_img, caption="Detection Results", use_column_width=True)
-
-elif option == "Upload Video":
-    uploaded_file = st.sidebar.file_uploader("Choose a video...", type=["mp4", "mov", "avi"])
-    if uploaded_file is not None:
-        st.subheader("Processing Video...")
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(uploaded_file.read())
-        process_video(tfile.name, frame_interval=5)
