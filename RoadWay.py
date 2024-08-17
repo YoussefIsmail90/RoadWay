@@ -122,7 +122,7 @@ confidence_threshold = st.sidebar.slider(
     "Detection Confidence Threshold",
     0.0,  
     1.0,  
-    0.25  
+    0.05  
 )
 
 if option == "Upload Image":
@@ -134,15 +134,15 @@ if option == "Upload Image":
         lat, lon = get_image_gps(image)
         if lat and lon:
             display_map(lat, lon)
-        else:
-            st.warning("Location could not be determined from the image metadata.")
+        # else:
+            # st.warning("Location could not be determined from the image metadata.")
         
         image_np = np.array(image)
         with st.spinner('Processing image...'):
             combined_img = process_image(image_np)
         
         st.subheader("Detection Results")
-        st.image(combined_img, caption="Combined Detection Results", use_column_width=True)
+        st.image(combined_img, caption="Detection Results", use_column_width=True)
 
 elif option == "Upload Video":
     uploaded_file = st.sidebar.file_uploader("Choose a video...", type=["mp4", "mov", "avi"])
