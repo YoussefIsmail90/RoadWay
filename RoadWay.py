@@ -151,7 +151,7 @@ if option == "Upload Image":
         st.subheader("Detection Results")
         st.image(combined_img, caption="Detection Results", use_column_width=True)
 
-elif option == "Upload Image URL":
+elif option == "Enter Image URL":
     url = st.sidebar.text_input("Enter image URL")
     if url:
         image = load_image_from_url(url)
