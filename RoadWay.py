@@ -34,14 +34,27 @@ desired_classes = {
 }
 desired_class_indices = list(desired_classes.values())
 
+# Function to draw bounding boxes and labels manually
+def draw_boxes(image, results, color):
+    for result in results[0].boxes:
+        x1, y1, x2, y2 = map(int, result.xyxy)
+        label = result.cls
+        confidence = result.conf
+        cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(image, f"{label} {confidence:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
 # Function to overlay detections with separate colors
 def overlay_detections_separately(image_np, results_existing, results_new):
-    img_with_boxes_existing = results_existing[0].plot(line_width=2, box_color=(0, 255, 0), text_color=(0, 255, 0))
-    img_with_boxes_new = results_new[0].plot(line_width=2, box_color=(255, 0, 0), text_color=(255, 0, 0))
+    img_with_boxes_existing = image_np.copy()
+    img_with_boxes_new = image_np.copy()
 
-    # Adjust the transparency and overlay each detection result separately
-    combined_img_existing = cv2.addWeighted(image_np, 1, img_with_boxes_existing, 0.4, 0)
-    combined_img_new = cv2.addWeighted(combined_img_existing, 1, img_with_boxes_new, 0.4, 0)
+    # Draw boxes using the manual method
+    draw_boxes(img_with_boxes_existing, results_existing, (0, 255, 0))
+    draw_boxes(img_with_boxes_new, results_new, (255, 0, 0))
+
+    # Adjust transparency
+    combined_img_existing = cv2.addWeighted(image_np, 1, img_with_boxes_existing, 0.5, 0)
+    combined_img_new = cv2.addWeighted(combined_img_existing, 1, img_with_boxes_new, 0.5, 0)
     
     return combined_img_new
 
