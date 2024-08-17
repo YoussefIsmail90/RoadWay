@@ -125,7 +125,7 @@ st.title("Roadway Infrastructure Monitoring System")
 
 st.sidebar.header("Upload Image")
 
-option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Image URL"))
+option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Enter Image URL"))
 
 confidence_threshold = st.sidebar.slider(
     "Detection Confidence Threshold",
