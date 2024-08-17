@@ -1,11 +1,12 @@
 import streamlit as st
 from PIL import Image, ExifTags
 import numpy as np
-import tempfile
 import cv2
 from ultralytics import YOLO
 import folium
 from streamlit_folium import st_folium
+import requests
+from io import BytesIO
 
 # Load YOLO models
 try:
@@ -72,7 +73,6 @@ def get_image_gps(image):
     try:
         exif_data = image._getexif()
         if exif_data is None:
-            # st.warning("No EXIF data found.")
             return None, None
 
         gps_info = {}
@@ -83,7 +83,6 @@ def get_image_gps(image):
                 break
 
         if not gps_info:
-            # st.warning("No GPS information found in EXIF data.")
             return None, None
 
         def _convert_to_degrees(value):
@@ -111,12 +110,22 @@ def display_map(lat, lon):
     folium.Marker([lat, lon], popup="Location").add_to(m)
     st_folium(m, width=700, height=500)
 
+# Function to load image from URL
+def load_image_from_url(url):
+    try:
+        response = requests.get(url)
+        image = Image.open(BytesIO(response.content))
+        return image
+    except Exception as e:
+        st.error(f"Failed to load image from URL: {e}")
+        return None
+
 # Streamlit app title
 st.title("Roadway Infrastructure Monitoring System")
 
 st.sidebar.header("Upload Image")
 
-option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Video"))
+option = st.sidebar.selectbox("Choose Input Type", ("Upload Image", "Upload Image URL"))
 
 confidence_threshold = st.sidebar.slider(
     "Detection Confidence Threshold",
@@ -134,8 +143,6 @@ if option == "Upload Image":
         lat, lon = get_image_gps(image)
         if lat and lon:
             display_map(lat, lon)
-        # else:
-            # st.warning("Location could not be determined from the image metadata.")
         
         image_np = np.array(image)
         with st.spinner('Processing image...'):
@@ -143,3 +150,21 @@ if option == "Upload Image":
         
         st.subheader("Detection Results")
         st.image(combined_img, caption="Detection Results", use_column_width=True)
+
+elif option == "Upload Image URL":
+    url = st.sidebar.text_input("Enter image URL")
+    if url:
+        image = load_image_from_url(url)
+        if image:
+            st.image(image, caption='Image from URL.', use_column_width=True)
+            
+            lat, lon = get_image_gps(image)
+            if lat and lon:
+                display_map(lat, lon)
+            
+            image_np = np.array(image)
+            with st.spinner('Processing image...'):
+                combined_img = process_image(image_np)
+            
+            st.subheader("Detection Results")
+            st.image(combined_img, caption="Detection Results", use_column_width=True)
