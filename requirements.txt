@@ -5,3 +5,4 @@ ultralytics
 numpy
 folium
 streamlit-folium
+pyopengl
