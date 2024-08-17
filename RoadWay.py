@@ -34,14 +34,14 @@ desired_classes = {
 }
 desired_class_indices = list(desired_classes.values())
 
-# Function to overlay detections separately from two models
+# Function to overlay detections with separate colors
 def overlay_detections_separately(image_np, results_existing, results_new):
-    img_with_boxes_existing = results_existing[0].plot()
-    img_with_boxes_new = results_new[0].plot()
+    img_with_boxes_existing = results_existing[0].plot(line_width=2, box_color=(0, 255, 0), text_color=(0, 255, 0))
+    img_with_boxes_new = results_new[0].plot(line_width=2, box_color=(255, 0, 0), text_color=(255, 0, 0))
 
     # Adjust the transparency and overlay each detection result separately
-    combined_img_existing = cv2.addWeighted(image_np, 1, img_with_boxes_existing, 0.5, 0)
-    combined_img_new = cv2.addWeighted(combined_img_existing, 1, img_with_boxes_new, 0.5, 0)
+    combined_img_existing = cv2.addWeighted(image_np, 1, img_with_boxes_existing, 0.4, 0)
+    combined_img_new = cv2.addWeighted(combined_img_existing, 1, img_with_boxes_new, 0.4, 0)
     
     return combined_img_new
 
