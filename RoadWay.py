@@ -66,6 +66,26 @@ def process_image(image_np):
     combined_img = overlay_detections(image_rgb, results_existing, results_new)
     
     return combined_img
+    
+def process_video(video_path, frame_interval=5):
+    cap = cv2.VideoCapture(video_path)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    stframe = st.empty()
+    
+    for i in range(frame_count):
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        if i % frame_interval == 0:
+            results_existing = model_existing.predict(source=frame, conf=confidence_threshold, classes=desired_class_indices)
+            results_new = model_new.predict(source=frame, conf=confidence_threshold)
+            
+            combined_frame = overlay_detections(frame, results_existing, results_new)
+            stframe.image(combined_frame, channels="RGB", use_column_width=True)
+
+    cap.release()
 
 # Function to extract GPS coordinates from image metadata
 def get_image_gps(image):
